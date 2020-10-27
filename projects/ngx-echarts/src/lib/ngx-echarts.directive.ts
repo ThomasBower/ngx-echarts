@@ -14,8 +14,12 @@ import {
   Output,
   SimpleChanges,
 } from '@angular/core';
-import { fromEvent, Observable, Subscription } from 'rxjs';
+import { Observable } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
+import {
+  ngResizeObserverProviders,
+  NgResizeObserver
+} from 'ng-resize-observer';
 import { ChangeFilter } from './change-filter';
 
 export interface NgxEchartsConfig {
@@ -27,6 +31,7 @@ export const NGX_ECHARTS_CONFIG = new InjectionToken<NgxEchartsConfig>('NGX_ECHA
 @Directive({
   selector: 'echarts, [echarts]',
   exportAs: 'echarts',
+  providers: [...ngResizeObserverProviders]
 })
 export class NgxEchartsDirective implements OnChanges, OnDestroy, OnInit, DoCheck, AfterViewInit {
   @Input() options: any;
@@ -90,12 +95,12 @@ export class NgxEchartsDirective implements OnChanges, OnDestroy, OnInit, DoChec
   private currentOffsetWidth = 0;
   private currentOffsetHeight = 0;
   private currentWindowWidth: number;
-  private resizeSub: Subscription;
 
   constructor(
     @Inject(NGX_ECHARTS_CONFIG) config: NgxEchartsConfig,
     private el: ElementRef,
     private ngZone: NgZone,
+    private resize$: NgResizeObserver
   ) {
     this.echarts = config.echarts;
   }
@@ -109,8 +114,7 @@ export class NgxEchartsDirective implements OnChanges, OnDestroy, OnInit, DoChec
   }
 
   ngOnInit() {
-    this.resizeSub = fromEvent(window, 'resize')
-      .pipe(debounceTime(50))
+    this.resize$.pipe(debounceTime(50))
       .subscribe(() => {
         if (this.autoResize && window.innerWidth !== this.currentWindowWidth) {
           this.currentWindowWidth = window.innerWidth;
@@ -122,9 +126,6 @@ export class NgxEchartsDirective implements OnChanges, OnDestroy, OnInit, DoChec
   }
 
   ngOnDestroy() {
-    if (this.resizeSub) {
-      this.resizeSub.unsubscribe();
-    }
     this.dispose();
   }
 
